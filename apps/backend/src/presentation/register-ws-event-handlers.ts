@@ -18,6 +18,7 @@ import { RoomRepository } from '../infrastructure/persistence/room.repository';
 import { UserException } from '../domain/exceptions/user-exception';
 import { GameCompleteEvent } from '../domain/events/game-complete.event';
 import { PlayersTied } from '../domain/events/players-tied.event';
+import { UserBalanceChangedEvent } from '../domain/events/user-balance-changed.event';
 
 @Injectable()
 export class RegisterWsEventHandlers {
@@ -56,13 +57,17 @@ export class RegisterWsEventHandlers {
       server.to(roomWsId).emit('ROOM_STATUS', room.getRoomStatus());
     });
 
-    onDomainEvent(UserPlacedBetEvent, (event) => {
-      const { room, user, amount } = event;
-      const roomWsId = RegisterWsEventHandlers.getRoomWsId(room);
+    onDomainEvent(UserBalanceChangedEvent, (event) => {
+      const { user } = event;
       const socket = this.sessionService.getCurrentSocketForUser(user);
       if (socket) {
         socket.emit('BALANCE', { balance: user.balance });
       }
+    });
+
+    onDomainEvent(UserPlacedBetEvent, (event) => {
+      const { room, user, amount } = event;
+      const roomWsId = RegisterWsEventHandlers.getRoomWsId(room);
       server
         .to(roomWsId)
         .emit('BET_PLACED', { username: user.username, amount });
@@ -92,10 +97,6 @@ export class RegisterWsEventHandlers {
           amount: pot,
         },
       });
-      const socket = this.sessionService.getCurrentSocketForUser(user);
-      if (socket) {
-        socket.emit('BALANCE', { balance: user.balance });
-      }
     });
 
     onDomainEvent(PlayersTied, (event) => {

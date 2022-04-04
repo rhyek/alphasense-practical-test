@@ -30,7 +30,7 @@ export class RoomEntity {
   private gameStarted = false;
   private gameTied = false;
   private bets: Bet[] = [];
-  private players: UserEntity[] = [];
+  private currentPhasePlayers: UserEntity[] = [];
   private rolls: Roll[] = [];
 
   private dev_gamePhase = 1; // to help during dev since no e2e or integration tests
@@ -48,9 +48,18 @@ export class RoomEntity {
     const index = this.users.indexOf(user);
     if (index >= 0) {
       this.users.splice(index, 1);
-      remove(this.players, (player) => player === user);
-      remove(this.rolls, (roll) => roll.user === user);
-      this.processCompletedGameIfCompleted();
+      if (this.gameStarted) {
+        remove(this.currentPhasePlayers, (player) => player === user);
+        remove(this.rolls, (roll) => roll.user === user);
+        this.processCompletedGameIfCompleted();
+      } else {
+        const userBets = remove(this.bets, (bet) => bet.user === user);
+        const amount = userBets.reduce(
+          (sum, current) => sum + current.amount,
+          0
+        );
+        user.addBalance(amount);
+      }
       emitDomainEvent(new UserLeftRoomEvent(user, this));
     }
   }
@@ -66,13 +75,13 @@ export class RoomEntity {
     if (this.gameStarted && !this.gameTied) {
       throw new UserException('GAME_ONGOING');
     }
-    if (this.gameTied && !this.players.includes(user)) {
+    if (this.gameTied && !this.currentPhasePlayers.includes(user)) {
       throw new UserException('NOT_PARTICIPATING');
     }
     if (user.balance < amount) {
       throw new UserException('INSUFFICIENT_FUNDS');
     }
-    user.balance -= amount;
+    user.addBalance(-amount);
     this.bets.push(new Bet(user, amount));
     emitDomainEvent(new UserPlacedBetEvent(user, this, amount));
   }
@@ -115,7 +124,7 @@ export class RoomEntity {
     this.gameStarted = true;
     this.gameTied = false;
     this.dev_gamePhase = 1; // to help during dev since no e2e or integration tests
-    this.players = this.getBettingUsers();
+    this.currentPhasePlayers = this.getBettingUsers();
     const betsGroupedByUsername = this.getBetsGroupedByUsername();
     emitDomainEvent(
       new GameStartedEvent(this, {
@@ -130,7 +139,7 @@ export class RoomEntity {
       return; // if game is not started just ignore
     }
     // ensure they are a current player
-    if (this.players.every((player) => player !== user)) {
+    if (this.currentPhasePlayers.every((player) => player !== user)) {
       throw new UserException('NOT_PARTICIPATING');
     }
     // ensure they haven't rolled already
@@ -155,27 +164,40 @@ export class RoomEntity {
     this.processCompletedGameIfCompleted();
   }
 
+  private processWinner(user: UserEntity) {
+    const pot = this.getCurrentPot();
+    user.addBalance(pot); // assign winnings
+
+    this.currentPhasePlayers = [];
+    this.bets = [];
+    this.rolls = [];
+    this.gameStarted = false;
+    this.gameTied = false;
+
+    emitDomainEvent(new GameCompleteEvent(this, user, pot));
+  }
+
   private processCompletedGameIfCompleted() {
-    if (this.players.length === this.rolls.length) {
+    if (this.currentPhasePlayers.length === 1) {
+      const [user] = this.currentPhasePlayers;
+      this.processWinner(user);
+    } else if (
+      // every current phase player rolled
+      this.currentPhasePlayers.every((player) =>
+        this.rolls.some((roll) => roll.user === player)
+      )
+    ) {
       this.dev_gamePhase++; // to help during dev since no e2e or integration tests
       const max = Math.max(...this.rolls.map((roll) => roll.value));
       const winningRolls = this.rolls.filter((roll) => roll.value === max);
       if (winningRolls.length === 1) {
         const [winningRoll] = winningRolls;
         const { user } = winningRoll;
-        const pot = this.getCurrentPot();
-        user.balance += pot; // assign winnings
-
-        this.players = [];
-        this.bets = [];
-        this.rolls = [];
-        this.gameStarted = false;
-        this.gameTied = false;
-        emitDomainEvent(new GameCompleteEvent(this, user, pot));
+        this.processWinner(user);
       } else {
         this.gameTied = true;
         const tiedPlayers = winningRolls.map((winningRoll) => winningRoll.user);
-        this.players = tiedPlayers;
+        this.currentPhasePlayers = tiedPlayers;
         this.rolls = [];
         emitDomainEvent(new PlayersTied(this, tiedPlayers, max));
       }
