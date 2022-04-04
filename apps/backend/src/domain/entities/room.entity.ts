@@ -1,4 +1,4 @@
-import { groupBy, random } from 'lodash';
+import { groupBy, random, remove } from 'lodash';
 import { emitDomainEvent } from '../domain-event.emitter';
 import { DieRolledEvent } from '../events/die-rolled.event';
 import { GameCompleteEvent } from '../events/game-complete.event';
@@ -47,6 +47,9 @@ export class RoomEntity {
     const index = this.users.indexOf(user);
     if (index >= 0) {
       this.users.splice(index, 1);
+      remove(this.players, (player) => player === user);
+      remove(this.rolls, (roll) => roll.user === user);
+      this.processCompletedGameIfCompleted();
       emitDomainEvent(new UserLeftRoomEvent(user, this));
     }
   }
@@ -102,8 +105,7 @@ export class RoomEntity {
     if (this.gameStarted) {
       throw new UserException('GAME_ONGOING');
     }
-    const nBettingUsers = this.getBettingUsers().length;
-    if (nBettingUsers < 2) {
+    if (this.getBetsGroupedByUsername().length < 2) {
       throw new UserException('NOT_ENOUGH_BETS');
     }
     this.gameStarted = true;
@@ -145,30 +147,31 @@ export class RoomEntity {
 
     emitDomainEvent(new DieRolledEvent(this, user, value));
 
-    if (this.players.length === this.rolls.length) {
-      this.processCompletedGame();
-    }
+    this.processCompletedGameIfCompleted();
   }
 
-  private processCompletedGame() {
-    this.dev_gamePhase++; // to help during dev since no e2e or integration tests
-    const max = Math.max(...this.rolls.map((roll) => roll.value));
-    const winningRolls = this.rolls.filter((roll) => roll.value === max);
-    if (winningRolls.length === 1) {
-      const [winningRoll] = winningRolls;
-      const { user } = winningRoll;
-      const pot = this.getCurrentPot();
-      user.balance += pot; // assign winnings
+  private processCompletedGameIfCompleted() {
+    if (this.players.length === this.rolls.length) {
+      this.dev_gamePhase++; // to help during dev since no e2e or integration tests
+      const max = Math.max(...this.rolls.map((roll) => roll.value));
+      const winningRolls = this.rolls.filter((roll) => roll.value === max);
+      if (winningRolls.length === 1) {
+        const [winningRoll] = winningRolls;
+        const { user } = winningRoll;
+        const pot = this.getCurrentPot();
+        user.balance += pot; // assign winnings
 
-      this.players = [];
-      this.bets = [];
-      this.rolls = [];
-      this.gameStarted = false;
-      emitDomainEvent(new GameCompleteEvent(this, user, pot));
-    } else {
-      this.players = winningRolls.map((winningRoll) => winningRoll.user);
-      this.rolls = [];
-      emitDomainEvent(new PlayersTied(this, this.players, max));
+        this.players = [];
+        this.bets = [];
+        this.rolls = [];
+        this.gameStarted = false;
+        emitDomainEvent(new GameCompleteEvent(this, user, pot));
+      } else {
+        const tiedPlayers = winningRolls.map((winningRoll) => winningRoll.user);
+        this.players = tiedPlayers;
+        this.rolls = [];
+        emitDomainEvent(new PlayersTied(this, tiedPlayers, max));
+      }
     }
   }
 }

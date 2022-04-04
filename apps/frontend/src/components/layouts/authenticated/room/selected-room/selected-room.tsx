@@ -7,9 +7,10 @@ import { RoomUsers } from './room-users';
 import { SectionTitle } from '../section-title';
 
 export const SelectedRoom = memo<{ roomId: number | null }>(({ roomId }) => {
-  const [roomData, setRoomData] = useState<{ usernames: string[] } | null>(
-    null
-  );
+  const [roomData, setRoomData] = useState<{
+    roomId: number;
+    usernames: string[];
+  } | null>(null);
 
   const { socket } = useWebSocket();
 
@@ -17,7 +18,7 @@ export const SelectedRoom = memo<{ roomId: number | null }>(({ roomId }) => {
     if (roomId) {
       socket.emit('JOIN_ROOM', roomId);
       const handler: ServerToClientEvents['ROOM_STATUS'] = ({ users }) => {
-        setRoomData({ usernames: users.map((user) => user.username) });
+        setRoomData({ roomId, usernames: users.map((user) => user.username) });
       };
       socket.on('ROOM_STATUS', handler);
       return () => {
@@ -37,7 +38,7 @@ export const SelectedRoom = memo<{ roomId: number | null }>(({ roomId }) => {
       <SectionTitle>current room: {roomId}</SectionTitle>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
         <RoomUsers usernames={roomData.usernames} />
-        <RoomMessages />
+        <RoomMessages roomId={roomData.roomId} />
         <RoomActions />
       </div>
     </div>

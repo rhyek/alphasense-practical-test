@@ -6,9 +6,13 @@ import { DieRolledMessage } from './die-rolled-message';
 import { GameCompletedMessage } from './game-completed-message';
 import { GameStartedMessage } from './game-started-message';
 
-export const RoomMessages = memo(() => {
+export const RoomMessages = memo<{ roomId: number }>(({ roomId }) => {
   const [messages, setMessages] = useState<(string | React.ReactNode)[]>([]);
   const { socket } = useWebSocket();
+
+  useEffect(() => {
+    setMessages([]);
+  }, [roomId]);
 
   useEffect(() => {
     const handler: ServerToClientEvents['BET_PLACED'] = ({
