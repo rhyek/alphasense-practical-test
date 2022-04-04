@@ -66,17 +66,43 @@ export const RoomMessages = memo<{ roomId: number }>(({ roomId }) => {
     <div
       style={{
         flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
         paddingLeft: 10,
         paddingRight: 10,
         borderRight: '1px solid silver',
       }}
     >
       <PanelTitle>messages</PanelTitle>
-      <ul style={{ margin: 0, paddingLeft: 20 }}>
-        {messages.map((message, index) => (
-          <li key={index}>{message}</li>
-        ))}
-      </ul>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          overflow: 'auto',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          }}
+        >
+          <ul
+            style={{
+              margin: 0,
+              paddingLeft: 20,
+            }}
+          >
+            {messages.map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 });

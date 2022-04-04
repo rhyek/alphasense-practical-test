@@ -36,7 +36,13 @@ export const SelectedRoom = memo<{ roomId: number | null }>(({ roomId }) => {
       style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 10 }}
     >
       <SectionTitle>current room: {roomId}</SectionTitle>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'row',
+        }}
+      >
         <RoomUsers usernames={roomData.usernames} />
         <RoomMessages roomId={roomData.roomId} />
         <RoomActions />
