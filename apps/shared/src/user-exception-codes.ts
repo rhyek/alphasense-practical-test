@@ -1,0 +1,7 @@
+export type UserExceptionCode =
+  | 'NOT_IN_ROOM'
+  | 'INSUFFICIENT_FUNDS'
+  | 'GAME_ONGOING'
+  | 'NOT_ENOUGH_BETS'
+  | 'ALREADY_ROLLED'
+  | 'NOT_PARTICIPATING';
