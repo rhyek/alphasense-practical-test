@@ -28,6 +28,7 @@ export class RoomEntity {
   public users: UserEntity[] = [];
 
   private gameStarted = false;
+  private gameTied = false;
   private bets: Bet[] = [];
   private players: UserEntity[] = [];
   private rolls: Roll[] = [];
@@ -62,8 +63,11 @@ export class RoomEntity {
   }
 
   public userPlaceBet(user: UserEntity, amount: number) {
-    if (this.gameStarted) {
+    if (this.gameStarted && !this.gameTied) {
       throw new UserException('GAME_ONGOING');
+    }
+    if (this.gameTied && !this.players.includes(user)) {
+      throw new UserException('NOT_PARTICIPATING');
     }
     if (user.balance < amount) {
       throw new UserException('INSUFFICIENT_FUNDS');
@@ -109,6 +113,7 @@ export class RoomEntity {
       throw new UserException('NOT_ENOUGH_BETS');
     }
     this.gameStarted = true;
+    this.gameTied = false;
     this.dev_gamePhase = 1; // to help during dev since no e2e or integration tests
     this.players = this.getBettingUsers();
     const betsGroupedByUsername = this.getBetsGroupedByUsername();
@@ -165,8 +170,10 @@ export class RoomEntity {
         this.bets = [];
         this.rolls = [];
         this.gameStarted = false;
+        this.gameTied = false;
         emitDomainEvent(new GameCompleteEvent(this, user, pot));
       } else {
+        this.gameTied = true;
         const tiedPlayers = winningRolls.map((winningRoll) => winningRoll.user);
         this.players = tiedPlayers;
         this.rolls = [];
