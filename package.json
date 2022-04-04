@@ -1,0 +1,8 @@
+{
+  "name": "alphasense-practical-test",
+  "private": true,
+  "scripts": {
+    "dev": "(cd apps/shared; tsc --build) && pnpm -r run start",
+    "clean": "pnpm -r exec rm -rf node_modules dist tsconfig.tsbuildinfo"
+  }
+}
