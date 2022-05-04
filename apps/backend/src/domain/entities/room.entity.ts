@@ -3,7 +3,7 @@ import { emitDomainEvent } from '../domain-event.emitter';
 import { DieRolledEvent } from '../events/die-rolled.event';
 import { GameCompleteEvent } from '../events/game-complete.event';
 import { GameStartedEvent } from '../events/game-started.event';
-import { PlayersTied } from '../events/players-tied.event';
+import { PlayersTiedEvent } from '../events/players-tied.event';
 import { UserJoinedRoomEvent } from '../events/user-joined-room.event';
 import { UserLeftRoomEvent } from '../events/user-left-room.event';
 import { UserPlacedBetEvent } from '../events/user-placed-bet.event';
@@ -199,7 +199,7 @@ export class RoomEntity {
         const tiedPlayers = winningRolls.map((winningRoll) => winningRoll.user);
         this.currentPhasePlayers = tiedPlayers;
         this.rolls = [];
-        emitDomainEvent(new PlayersTied(this, tiedPlayers, max));
+        emitDomainEvent(new PlayersTiedEvent(this, tiedPlayers, max));
       }
     }
   }

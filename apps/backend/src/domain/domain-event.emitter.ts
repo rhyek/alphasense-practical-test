@@ -7,8 +7,8 @@ export function emitDomainEvent(domainEvent: any) {
   eventEmitter.emit('domain-event', domainEvent);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function onDomainEvent<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   domainEvent: new (...args: any[]) => T,
   handler: (domainEvent: T) => void
 ) {

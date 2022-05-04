@@ -17,7 +17,7 @@ import { DieRolledEvent } from '../domain/events/die-rolled.event';
 import { RoomRepository } from '../infrastructure/persistence/room.repository';
 import { UserException } from '../domain/exceptions/user-exception';
 import { GameCompleteEvent } from '../domain/events/game-complete.event';
-import { PlayersTied } from '../domain/events/players-tied.event';
+import { PlayersTiedEvent } from '../domain/events/players-tied.event';
 import { UserBalanceChangedEvent } from '../domain/events/user-balance-changed.event';
 
 @Injectable()
@@ -41,7 +41,7 @@ export class RegisterWsEventHandlers {
       const roomWsId = RegisterWsEventHandlers.getRoomWsId(room);
       const socket = this.sessionService.getCurrentSocketForUser(user);
       if (socket) {
-        console.log(`joining room ${roomWsId} on socket ${socket?.id}`);
+        console.log(`joining room ${roomWsId} on socket ${socket.id}`);
         socket.join(roomWsId);
       }
       server.to(roomWsId).emit('ROOM_STATUS', room.getRoomStatus());
@@ -99,7 +99,7 @@ export class RegisterWsEventHandlers {
       });
     });
 
-    onDomainEvent(PlayersTied, (event) => {
+    onDomainEvent(PlayersTiedEvent, (event) => {
       const { users } = event;
       for (const user of users) {
         const socket = this.sessionService.getCurrentSocketForUser(user);
