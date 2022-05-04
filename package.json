@@ -1,5 +1,5 @@
 {
-  "name": "alphasense-practical-test",
+  "name": "interview-home-assigment",
   "private": true,
   "scripts": {
     "dev": "(cd apps/shared; tsc --build) && pnpm -r run start",
